@@ -115,7 +115,7 @@
 %token t_NEW t_PERIOD t_XML_DESCENDENT t_XML_QUALIFIER
 
 // Literals
-%type<node> null_literal boolean_literal numeric_literal regex_literal string_literal array_literal element_list object_literal property_name property_name_and_value_list
+%type<node> null_literal boolean_literal numeric_literal regex_literal string_literal array_literal element_list object_literal property_name property_name_and_value_list property_name_and_value
 
 // Expressions
 %type<node> primary_expression_no_statement primary_expression member_expression new_expression call_expression left_hand_side_expression pre_in_expression post_in_expression conditional_expression assignment_expression expression expression_opt
@@ -138,7 +138,7 @@
 %type<duple> catch
 
 // Functions
-%type<node> function_expression function_declaration formal_parameter_list function_body
+%type<node> function_expression function_declaration formal_parameter_list formal_parameter_list_params function_body
 
 // E4X / XML
 %type<node> xml_literal
@@ -303,12 +303,32 @@ property_name:
 |   numeric_literal
 ;
 
-property_name_and_value_list:
+property_name_and_value:
     property_name t_COLON assignment_expression {
-      $$ = (new NodeObjectLiteral($1->lineno()))->appendChild((new NodeObjectLiteralProperty($1->lineno()))->appendChild($1)->appendChild($3));
+      $$ = (new NodeObjectLiteralProperty($1->lineno()))->appendChild($1)->appendChild($3);
     }
-|   property_name_and_value_list t_COMMA property_name t_COLON assignment_expression {
-      $$ = $1->appendChild((new NodeObjectLiteralProperty($1->lineno()))->appendChild($3)->appendChild($5));
+|   identifier identifier t_LPAREN formal_parameter_list t_RPAREN t_LCURLY function_body t_RCURLY {
+      require_support(PARSE_ACCESSORS, "syntax error, unexpected t_IDENTIFIER, expecting t_COLON");
+      bool getter;
+      if (static_cast<NodeIdentifier*>($1)->name() == "get") {
+        getter = true;
+      } else if (static_cast<NodeIdentifier*>($1)->name() == "set") {
+        getter = false;
+      } else {
+        terminate(yyscanner, "syntax error, unexpected t_IDENTIFIER, expecting t_COLON");
+        $$ = NULL;
+        break;
+      }
+      $$ = (new NodeObjectLiteralAccessor(getter, $1->lineno()))->appendChild($2)->appendChild($4)->appendChild($7);
+    }
+;
+
+property_name_and_value_list:
+    property_name_and_value {
+      $$ = (new NodeObjectLiteral($1->lineno()))->appendChild($1);
+    }
+|   property_name_and_value_list t_COMMA property_name_and_value {
+      $$ = $1->appendChild($3);
     }
 ;
 
@@ -1139,31 +1159,29 @@ function_declaration:
     t_FUNCTION identifier t_LPAREN formal_parameter_list t_RPAREN t_LCURLY function_body t_RCURLY {
       $$ = (new NodeFunctionDeclaration($2->lineno()))->appendChild($2)->appendChild($4)->appendChild($7);
     }
-|   t_FUNCTION identifier t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionDeclaration($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()))->appendChild($6);
-    }
 ;
 
 function_expression:
     t_FUNCTION identifier t_LPAREN formal_parameter_list t_RPAREN t_LCURLY function_body t_RCURLY {
       $$ = (new NodeFunctionExpression($2->lineno()))->appendChild($2)->appendChild($4)->appendChild($7);
     }
-|   t_FUNCTION identifier t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionExpression($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()))->appendChild($6);
-    }
 |   t_FUNCTION t_LPAREN formal_parameter_list t_RPAREN t_LCURLY function_body t_RCURLY {
       $$ = (new NodeFunctionExpression($3->lineno()))->appendChild(NULL)->appendChild($3)->appendChild($6);
-    }
-|   t_FUNCTION t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionExpression($5->lineno()))->appendChild(NULL)->appendChild(new NodeArgList($5->lineno()))->appendChild($5);
     }
 ;
 
 formal_parameter_list:
+    formal_parameter_list_params
+|   /* empty */ {
+      $$ = new NodeArgList(yylineno);
+    }
+;
+
+formal_parameter_list_params:
     identifier_typehint_permitted {
       $$ = (new NodeArgList($1->lineno()))->appendChild($1);
     }
-|   formal_parameter_list t_COMMA identifier_typehint_permitted {
+|   formal_parameter_list_params t_COMMA identifier_typehint_permitted {
       $$ = $1->appendChild($3);
     }
 ;

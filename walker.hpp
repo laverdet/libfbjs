@@ -163,6 +163,7 @@ namespace fbjs {
       NODE_WALKER_VISIT_IMPL(NodeSwitch, Node);
       NODE_WALKER_VISIT_IMPL(NodeDefaultClause, NodeCaseClause);
       NODE_WALKER_VISIT_IMPL(NodeObjectLiteralProperty, Node);
+      NODE_WALKER_VISIT_IMPL(NodeObjectLiteralAccessor, Node);
       NODE_WALKER_VISIT_IMPL(NodeForLoop, Node);
       NODE_WALKER_VISIT_IMPL(NodeForIn, Node);
       NODE_WALKER_VISIT_IMPL(NodeForEachIn, Node);

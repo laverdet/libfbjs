@@ -62,6 +62,7 @@ NODE_WALKER_ACCEPT_IMPL(NodeCaseClause, Node);
 NODE_WALKER_ACCEPT_IMPL(NodeSwitch, Node);
 NODE_WALKER_ACCEPT_IMPL(NodeDefaultClause, NodeCaseClause);
 NODE_WALKER_ACCEPT_IMPL(NodeObjectLiteralProperty, Node);
+NODE_WALKER_ACCEPT_IMPL(NodeObjectLiteralAccessor, Node);
 NODE_WALKER_ACCEPT_IMPL(NodeForLoop, Node);
 NODE_WALKER_ACCEPT_IMPL(NodeForIn, Node);
 NODE_WALKER_ACCEPT_IMPL(NodeForEachIn, Node);

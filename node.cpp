@@ -1131,6 +1131,20 @@ rope_t NodeObjectLiteralProperty::render(render_guts_t* guts, int indentation) c
     this->_childNodes.back()->render(guts, indentation);
 }
 
+NodeObjectLiteralAccessor::NodeObjectLiteralAccessor(bool getter, const unsigned int lineno /* = 0 */) : Node(lineno), _getter(getter) {}
+Node* NodeObjectLiteralAccessor::clone(Node* node) const {
+  return Node::clone(new NodeObjectLiteralAccessor(this->_getter));
+}
+
+rope_t NodeObjectLiteralAccessor::render(render_guts_t* guts, int indentation) const {
+  rope_t ret(this->_getter ? "get " : "set ");
+  node_list_t::const_iterator node = this->_childNodes.begin();
+  ret += (*node)->render(guts, indentation);
+  ret += (*++node)->render(guts, indentation);
+  ret += (*++node)->renderBlock(true, guts, indentation);
+  return ret;
+}
+
 //
 // NodeArrayLiteral
 NodeArrayLiteral::NodeArrayLiteral(const unsigned int lineno /* = 0 */) : NodeExpression(lineno) {}

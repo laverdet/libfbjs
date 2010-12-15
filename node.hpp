@@ -43,6 +43,7 @@ namespace fbjs {
     PARSE_TYPEHINT = 1,
     PARSE_OBJECT_LITERAL_ELISON = 2,
     PARSE_E4X = 4,
+    PARSE_ACCESSORS = 8,
   };
   struct render_guts_t {
     unsigned int lineno;
@@ -555,6 +556,20 @@ namespace fbjs {
       NodeObjectLiteralProperty(const unsigned int lineno = 0);
       virtual Node* clone(Node* node = NULL) const;
       virtual rope_t render(render_guts_t* guts, int indentation) const;
+  };
+
+  //
+  // NodeObjectLiteralAccessor
+  class NodeObjectLiteralAccessor: public Node {
+    private:
+      bool _getter;
+    public:
+      NODE_WALKER_ACCEPT_DECL;
+      NodeObjectLiteralAccessor(bool getter, const unsigned int lineno = 0);
+      virtual Node* clone(Node* node = NULL) const;
+      virtual rope_t render(render_guts_t* guts, int indentation) const;
+      const bool getter() const { return _getter; };
+      const bool setter() const { return !_getter; };
   };
 
   //
