@@ -174,10 +174,10 @@ statement_list:
       // Silly hack since my awesome lexer sticks `t_VIRTUAL_SEMICOLON's all
       // over the place which ends up creating tons of `NodeEmptyExpression's
       if (dynamic_cast<NodeEmptyExpression*>($1) == NULL) {
-        $$ = (new NodeStatementList(yylineno))->appendChild($1);
+        $$ = (new NodeStatementList($1->lineno()))->appendChild($1);
       } else {
         delete $1;
-        $$ = new NodeStatementList(yylineno);
+        $$ = new NodeStatementList($1->lineno());
       }
     }
 |   statement_list source_element {
@@ -249,26 +249,26 @@ array_literal:
 |   t_LBRACKET element_list elison t_RBRACKET {
        $$ = $2;
        for (size_t i = 0; i < $3; i++) {
-         $$->appendChild(new NodeEmptyExpression(yylineno));
+         $$->appendChild(new NodeEmptyExpression($2->lineno()));
        }
     }
 ;
 
 element_list:
     elison assignment_expression {
-      $$ = (new NodeArrayLiteral(yylineno));
+      $$ = (new NodeArrayLiteral($2->lineno()));
       for (size_t i = 0; i < $1; i++) {
-        $$->appendChild(new NodeEmptyExpression(yylineno));
+        $$->appendChild(new NodeEmptyExpression($2->lineno()));
       }
       $$->appendChild($2);
     }
 |   assignment_expression {
-      $$ = (new NodeArrayLiteral(yylineno))->appendChild($1);
+      $$ = (new NodeArrayLiteral($1->lineno()))->appendChild($1);
     }
 |   element_list elison assignment_expression {
       $$ = $1;
       for (size_t i = 1; i < $2; i++) {
-        $$->appendChild(new NodeEmptyExpression(yylineno));
+        $$->appendChild(new NodeEmptyExpression($1->lineno()));
       }
       $$->appendChild($3);
     }
@@ -305,10 +305,10 @@ property_name:
 
 property_name_and_value_list:
     property_name t_COLON assignment_expression {
-      $$ = (new NodeObjectLiteral(yylineno))->appendChild((new NodeObjectLiteralProperty(yylineno))->appendChild($1)->appendChild($3));
+      $$ = (new NodeObjectLiteral($1->lineno()))->appendChild((new NodeObjectLiteralProperty($1->lineno()))->appendChild($1)->appendChild($3));
     }
 |   property_name_and_value_list t_COMMA property_name t_COLON assignment_expression {
-      $$ = $1->appendChild((new NodeObjectLiteralProperty(yylineno))->appendChild($3)->appendChild($5));
+      $$ = $1->appendChild((new NodeObjectLiteralProperty($1->lineno()))->appendChild($3)->appendChild($5));
     }
 ;
 
@@ -332,7 +332,7 @@ arguments:
 
 argument_list:
     assignment_expression {
-      $$ = (new NodeArgList(yylineno))->appendChild($1);
+      $$ = (new NodeArgList($1->lineno()))->appendChild($1);
     }
 |   argument_list t_COMMA assignment_expression {
       $$ = $1->appendChild($3);
@@ -392,7 +392,7 @@ primary_expression_no_statement:
 |   regex_literal /* this isn't an expansion of literal in ECMA-262... mistake? */
 |   array_literal
 |   t_LPAREN expression t_RPAREN {
-      $$ = (new NodeParenthetical(yylineno))->appendChild($2);
+      $$ = (new NodeParenthetical($2->lineno()))->appendChild($2);
     }
 ;
 
@@ -407,35 +407,35 @@ primary_expression:
 member_expression:
     primary_expression
 |   member_expression t_LBRACKET expression t_RBRACKET {
-      $$ = (new NodeDynamicMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDynamicMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression t_PERIOD identifier {
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   t_NEW member_expression arguments {
-      $$ = (new NodeFunctionConstructor(yylineno))->appendChild($2)->appendChild($3);
+      $$ = (new NodeFunctionConstructor($2->lineno()))->appendChild($2)->appendChild($3);
     }
 ;
 
 new_expression:
     member_expression
 |   t_NEW new_expression {
-      $$ = (new NodeFunctionConstructor(yylineno))->appendChild($2)->appendChild(new NodeArgList(yylineno));
+      $$ = (new NodeFunctionConstructor($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()));
     }
 ;
 
 call_expression:
     member_expression arguments {
-      $$ = (new NodeFunctionCall(yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeFunctionCall($1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   call_expression arguments {
-      $$ = (new NodeFunctionCall(yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeFunctionCall($1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   call_expression t_LBRACKET expression t_RBRACKET {
-      $$ = (new NodeDynamicMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDynamicMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression t_PERIOD identifier {
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -447,125 +447,125 @@ left_hand_side_expression:
 pre_in_expression:
     left_hand_side_expression
 |   pre_in_expression t_INCR %prec p_POSTFIX {
-      $$ = (new NodePostfix(INCR_POSTFIX, yylineno))->appendChild($1);
+      $$ = (new NodePostfix(INCR_POSTFIX, $1->lineno()))->appendChild($1);
     }
 |   pre_in_expression t_DECR %prec p_POSTFIX {
-      $$ = (new NodePostfix(DECR_POSTFIX, yylineno))->appendChild($1);
+      $$ = (new NodePostfix(DECR_POSTFIX, $1->lineno()))->appendChild($1);
     }
 |   t_DELETE pre_in_expression {
-      $$ = (new NodeUnary(DELETE, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(DELETE, $2->lineno()))->appendChild($2);
     }
 |   t_VOID pre_in_expression {
-      $$ = (new NodeUnary(VOID, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(VOID, $2->lineno()))->appendChild($2);
     }
 |   t_TYPEOF pre_in_expression {
-      $$ = (new NodeUnary(TYPEOF, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(TYPEOF, $2->lineno()))->appendChild($2);
     }
 |   t_INCR pre_in_expression {
-      $$ = (new NodeUnary(INCR_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(INCR_UNARY, $2->lineno()))->appendChild($2);
       if (!static_cast<NodeExpression*>($2)->isValidlVal()) {
         parsererror("invalid increment operand");
         $$ = NULL;
       }
     }
 |   t_DECR pre_in_expression {
-      $$ = (new NodeUnary(DECR_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(DECR_UNARY, $2->lineno()))->appendChild($2);
       if (!static_cast<NodeExpression*>($2)->isValidlVal()) {
         parsererror("invalid decrement operand");
         $$ = NULL;
       }
     }
 |   t_PLUS pre_in_expression {
-      $$ = (new NodeUnary(PLUS_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(PLUS_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_MINUS pre_in_expression {
-      $$ = (new NodeUnary(MINUS_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(MINUS_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_BIT_NOT pre_in_expression {
-      $$ = (new NodeUnary(BIT_NOT_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(BIT_NOT_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_NOT pre_in_expression {
-      $$ = (new NodeUnary(NOT_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(NOT_UNARY, $2->lineno()))->appendChild($2);
     }
 |   pre_in_expression t_MULT pre_in_expression {
-      $$ = (new NodeOperator(MULT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MULT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_DIV pre_in_expression {
-      $$ = (new NodeOperator(DIV, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(DIV, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_MOD pre_in_expression {
-      $$ = (new NodeOperator(MOD, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MOD, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_PLUS pre_in_expression {
-      $$ = (new NodeOperator(PLUS, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(PLUS, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_MINUS pre_in_expression {
-      $$ = (new NodeOperator(MINUS, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MINUS, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_LSHIFT pre_in_expression {
-      $$ = (new NodeOperator(LSHIFT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LSHIFT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_RSHIFT pre_in_expression {
-      $$ = (new NodeOperator(RSHIFT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(RSHIFT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression t_RSHIFT3 pre_in_expression {
-      $$ = (new NodeOperator(RSHIFT3, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(RSHIFT3, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 post_in_expression:
     pre_in_expression
 |   post_in_expression t_LESS_THAN post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_GREATER_THAN post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_LESS_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_GREATER_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_INSTANCEOF post_in_expression {
-      $$ = (new NodeOperator(INSTANCEOF, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(INSTANCEOF, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_IN post_in_expression {
-      $$ = (new NodeOperator(IN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(IN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_EQUAL post_in_expression {
-      $$ = (new NodeOperator(EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_STRICT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_STRICT_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_BIT_AND post_in_expression {
-      $$ = (new NodeOperator(BIT_AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_BIT_XOR post_in_expression {
-      $$ = (new NodeOperator(BIT_XOR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_XOR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_BIT_OR post_in_expression {
-      $$ = (new NodeOperator(BIT_OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_AND post_in_expression {
-      $$ = (new NodeOperator(AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression t_OR post_in_expression {
-      $$ = (new NodeOperator(OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 conditional_expression:
     post_in_expression
 |   post_in_expression t_PLING assignment_expression t_COLON assignment_expression {
-      $$ = (new NodeConditionalExpression(yylineno))->appendChild($1)->appendChild($3)->appendChild($5);
+      $$ = (new NodeConditionalExpression($1->lineno()))->appendChild($1)->appendChild($3)->appendChild($5);
     }
 ;
 
@@ -576,7 +576,7 @@ assignment_expression:
         parsererror("invalid assignment left-hand side");
         $$ = NULL;
       } else {
-        $$ = (new NodeAssignment($2, yylineno))->appendChild($1)->appendChild($3);
+        $$ = (new NodeAssignment($2, $1->lineno()))->appendChild($1)->appendChild($3);
       }
     }
 ;
@@ -584,7 +584,7 @@ assignment_expression:
 expression:
     assignment_expression
 |   expression t_COMMA assignment_expression {
-      $$ = (new NodeOperator(COMMA, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(COMMA, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -600,53 +600,53 @@ expression_opt:
 post_in_expression_no_in:
     pre_in_expression
 |   post_in_expression_no_in t_LESS_THAN post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_GREATER_THAN post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_LESS_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_GREATER_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_INSTANCEOF post_in_expression {
-      $$ = (new NodeOperator(INSTANCEOF, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(INSTANCEOF, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_EQUAL post_in_expression {
-      $$ = (new NodeOperator(EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_STRICT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_STRICT_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_BIT_AND post_in_expression {
-      $$ = (new NodeOperator(BIT_AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_BIT_XOR post_in_expression {
-      $$ = (new NodeOperator(BIT_XOR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_XOR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_BIT_OR post_in_expression {
-      $$ = (new NodeOperator(BIT_OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_AND post_in_expression {
-      $$ = (new NodeOperator(AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_in t_OR post_in_expression {
-      $$ = (new NodeOperator(OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 conditional_expression_no_in:
     post_in_expression_no_in
 |   post_in_expression_no_in t_PLING assignment_expression_no_in t_COLON assignment_expression_no_in {
-      $$ = (new NodeConditionalExpression(yylineno))->appendChild($1)->appendChild($3)->appendChild($5);
+      $$ = (new NodeConditionalExpression($1->lineno()))->appendChild($1)->appendChild($3)->appendChild($5);
     }
 ;
 
@@ -657,7 +657,7 @@ assignment_expression_no_in:
         parsererror("invalid assignment left-hand side");
         $$ = NULL;
       } else {
-        $$ = (new NodeAssignment($2, yylineno))->appendChild($1)->appendChild($3);
+        $$ = (new NodeAssignment($2, $1->lineno()))->appendChild($1)->appendChild($3);
       }
     }
 ;
@@ -665,7 +665,7 @@ assignment_expression_no_in:
 expression_no_in:
     assignment_expression_no_in
 |   expression_no_in t_COMMA assignment_expression_no_in {
-      $$ = (new NodeOperator(COMMA, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(COMMA, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -681,35 +681,35 @@ expression_no_in_opt:
 member_expression_no_statement:
     primary_expression_no_statement
 |   member_expression_no_statement t_LBRACKET expression t_RBRACKET {
-      $$ = (new NodeDynamicMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDynamicMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression_no_statement t_PERIOD identifier {
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   t_NEW member_expression arguments {
-      $$ = (new NodeFunctionConstructor(yylineno))->appendChild($2)->appendChild($3);
+      $$ = (new NodeFunctionConstructor($2->lineno()))->appendChild($2)->appendChild($3);
     }
 ;
 
 new_expression_no_statement:
     member_expression_no_statement
 |   t_NEW new_expression {
-      $$ = (new NodeFunctionConstructor(yylineno))->appendChild($2)->appendChild(new NodeArgList(yylineno));
+      $$ = (new NodeFunctionConstructor($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()));
     }
 ;
 
 call_expression_no_statement:
     member_expression_no_statement arguments {
-      $$ = (new NodeFunctionCall(yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeFunctionCall($1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   call_expression_no_statement arguments {
-      $$ = (new NodeFunctionCall(yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeFunctionCall($1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   call_expression_no_statement t_LBRACKET expression t_RBRACKET {
-      $$ = (new NodeDynamicMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDynamicMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression_no_statement t_PERIOD identifier {
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -721,125 +721,125 @@ left_hand_side_expression_no_statement:
 pre_in_expression_no_statement:
     left_hand_side_expression_no_statement
 |   pre_in_expression_no_statement t_INCR {
-      $$ = (new NodePostfix(INCR_POSTFIX, yylineno))->appendChild($1);
+      $$ = (new NodePostfix(INCR_POSTFIX, $1->lineno()))->appendChild($1);
     }
 |   pre_in_expression_no_statement t_DECR {
-      $$ = (new NodePostfix(DECR_POSTFIX, yylineno))->appendChild($1);
+      $$ = (new NodePostfix(DECR_POSTFIX, $1->lineno()))->appendChild($1);
     }
 |   t_DELETE pre_in_expression {
-      $$ = (new NodeUnary(DELETE, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(DELETE, $2->lineno()))->appendChild($2);
     }
 |   t_VOID pre_in_expression {
-      $$ = (new NodeUnary(VOID, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(VOID, $2->lineno()))->appendChild($2);
     }
 |   t_TYPEOF pre_in_expression {
-      $$ = (new NodeUnary(TYPEOF, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(TYPEOF, $2->lineno()))->appendChild($2);
     }
 |   t_INCR pre_in_expression {
-      $$ = (new NodeUnary(INCR_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(INCR_UNARY, $2->lineno()))->appendChild($2);
       if (!static_cast<NodeExpression*>($2)->isValidlVal()) {
         parsererror("invalid increment operand");
         $$ = NULL;
       }
     }
 |   t_DECR pre_in_expression {
-      $$ = (new NodeUnary(DECR_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(DECR_UNARY, $2->lineno()))->appendChild($2);
       if (!static_cast<NodeExpression*>($2)->isValidlVal()) {
         parsererror("invalid decrement operand");
         $$ = NULL;
       }
     }
 |   t_PLUS pre_in_expression {
-      $$ = (new NodeUnary(PLUS_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(PLUS_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_MINUS pre_in_expression {
-      $$ = (new NodeUnary(MINUS_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(MINUS_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_BIT_NOT pre_in_expression {
-      $$ = (new NodeUnary(BIT_NOT_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(BIT_NOT_UNARY, $2->lineno()))->appendChild($2);
     }
 |   t_NOT pre_in_expression {
-      $$ = (new NodeUnary(NOT_UNARY, yylineno))->appendChild($2);
+      $$ = (new NodeUnary(NOT_UNARY, $2->lineno()))->appendChild($2);
     }
 |   pre_in_expression_no_statement t_MULT pre_in_expression {
-      $$ = (new NodeOperator(MULT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MULT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_DIV pre_in_expression {
-      $$ = (new NodeOperator(DIV, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(DIV, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_MOD pre_in_expression {
-      $$ = (new NodeOperator(MOD, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MOD, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_PLUS pre_in_expression {
-      $$ = (new NodeOperator(PLUS, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(PLUS, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_MINUS pre_in_expression {
-      $$ = (new NodeOperator(MINUS, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(MINUS, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_LSHIFT pre_in_expression {
-      $$ = (new NodeOperator(LSHIFT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LSHIFT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_RSHIFT pre_in_expression {
-      $$ = (new NodeOperator(RSHIFT, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(RSHIFT, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   pre_in_expression_no_statement t_RSHIFT3 pre_in_expression {
-      $$ = (new NodeOperator(RSHIFT3, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(RSHIFT3, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 post_in_expression_no_statement:
     pre_in_expression_no_statement
 |   post_in_expression_no_statement t_LESS_THAN post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_GREATER_THAN post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_LESS_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(LESS_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(LESS_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_GREATER_THAN_EQUAL post_in_expression {
-      $$ = (new NodeOperator(GREATER_THAN_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(GREATER_THAN_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_INSTANCEOF post_in_expression {
-      $$ = (new NodeOperator(INSTANCEOF, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(INSTANCEOF, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_IN post_in_expression {
-      $$ = (new NodeOperator(IN, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(IN, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_EQUAL post_in_expression {
-      $$ = (new NodeOperator(EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_STRICT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_STRICT_NOT_EQUAL post_in_expression {
-      $$ = (new NodeOperator(STRICT_NOT_EQUAL, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(STRICT_NOT_EQUAL, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_BIT_AND post_in_expression {
-      $$ = (new NodeOperator(BIT_AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_BIT_XOR post_in_expression {
-      $$ = (new NodeOperator(BIT_XOR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_XOR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_BIT_OR post_in_expression {
-      $$ = (new NodeOperator(BIT_OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(BIT_OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_AND post_in_expression {
-      $$ = (new NodeOperator(AND, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(AND, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   post_in_expression_no_statement t_OR post_in_expression {
-      $$ = (new NodeOperator(OR, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(OR, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 conditional_expression_no_statement:
     post_in_expression_no_statement
 |   post_in_expression_no_statement t_PLING assignment_expression t_COLON assignment_expression {
-      $$ = (new NodeConditionalExpression(yylineno))->appendChild($1)->appendChild($3)->appendChild($5);
+      $$ = (new NodeConditionalExpression($1->lineno()))->appendChild($1)->appendChild($3)->appendChild($5);
     }
 ;
 
@@ -850,7 +850,7 @@ assignment_expression_no_statement:
         parsererror("invalid assignment left-hand side");
         $$ = NULL;
       } else {
-        $$ = (new NodeAssignment($2, yylineno))->appendChild($1)->appendChild($3);
+        $$ = (new NodeAssignment($2, $1->lineno()))->appendChild($1)->appendChild($3);
       }
     }
 ;
@@ -858,7 +858,7 @@ assignment_expression_no_statement:
 expression_no_statement:
     assignment_expression_no_statement
 |   expression_no_statement t_COMMA assignment_expression {
-      $$ = (new NodeOperator(COMMA, yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeOperator(COMMA, $1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -898,7 +898,7 @@ variable_statement:
 
 variable_declaration_list:
     variable_declaration {
-      $$ = (new NodeVarDeclaration(false, yylineno))->appendChild($1);
+      $$ = (new NodeVarDeclaration(false, $1->lineno()))->appendChild($1);
     }
 |   variable_declaration_list t_COMMA variable_declaration {
       $$->appendChild($3);
@@ -907,7 +907,7 @@ variable_declaration_list:
 
 variable_declaration:
     identifier_typehint_permitted initializer {
-      $$ = (new NodeAssignment(ASSIGN, yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeAssignment(ASSIGN, $1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   identifier_typehint_permitted
 ;
@@ -916,7 +916,7 @@ identifier_typehint_permitted:
     identifier
 |   identifier t_COLON identifier {
       require_support(PARSE_TYPEHINT, "typehints not supported");
-      $$ = (new NodeTypehint(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeTypehint($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
@@ -928,7 +928,7 @@ initializer:
 
 variable_declaration_list_no_in:
     variable_declaration_no_in {
-      $$ = (new NodeVarDeclaration(false, yylineno))->appendChild($1);
+      $$ = (new NodeVarDeclaration(false, $1->lineno()))->appendChild($1);
     }
 |   variable_declaration_list_no_in t_COMMA variable_declaration_no_in {
       $$->appendChild($3);
@@ -937,7 +937,7 @@ variable_declaration_list_no_in:
 
 variable_declaration_no_in:
     identifier initializer_no_in {
-      $$ = (new NodeAssignment(ASSIGN, yylineno))->appendChild($1)->appendChild($2);
+      $$ = (new NodeAssignment(ASSIGN, $1->lineno()))->appendChild($1)->appendChild($2);
     }
 |   identifier
 ;
@@ -1000,7 +1000,7 @@ iteration_statement:
 
 continue_statement:
     t_CONTINUE identifier semicolon {
-      $$ = (new NodeStatementWithExpression(CONTINUE, yylineno))->appendChild($2);
+      $$ = (new NodeStatementWithExpression(CONTINUE, $2->lineno()))->appendChild($2);
     }
 |   t_CONTINUE semicolon {
       $$ = (new NodeStatementWithExpression(CONTINUE, yylineno))->appendChild(NULL);
@@ -1009,7 +1009,7 @@ continue_statement:
 
 break_statement:
     t_BREAK identifier semicolon {
-      $$ = (new NodeStatementWithExpression(BREAK, yylineno))->appendChild($2);
+      $$ = (new NodeStatementWithExpression(BREAK, $2->lineno()))->appendChild($2);
     }
 |   t_BREAK semicolon {
       $$ = (new NodeStatementWithExpression(BREAK, yylineno))->appendChild(NULL);
@@ -1018,7 +1018,7 @@ break_statement:
 
 return_statement:
     t_RETURN expression semicolon {
-      $$ = (new NodeStatementWithExpression(RETURN, yylineno))->appendChild($2);
+      $$ = (new NodeStatementWithExpression(RETURN, $2->lineno()))->appendChild($2);
     }
 |   t_RETURN semicolon {
       $$ = (new NodeStatementWithExpression(RETURN, yylineno))->appendChild(NULL);
@@ -1042,7 +1042,7 @@ case_block:
       $$ = $2;
     }
 |   t_LCURLY case_clauses_opt default_clause case_clauses_opt t_RCURLY {
-      $$ = (new NodeStatementList(yylineno))->appendChild($2);
+      $$ = (new NodeStatementList($2->lineno()))->appendChild($2);
       $$->appendChild($3[0]);
       if ($3[1] != NULL) {
         $$->appendChild($3[1]);
@@ -1061,7 +1061,7 @@ case_clauses_opt:
 
 case_clauses:
     case_clause {
-      $$ = (new NodeStatementList(yylineno))->appendChild($1[0]);
+      $$ = (new NodeStatementList($1[0]->lineno()))->appendChild($1[0]);
       if ($1[1] != NULL) {
         $$->appendChild($1[1]);
       }
@@ -1092,19 +1092,19 @@ default_clause:
       $$[1] = NULL;
     }
 |   t_DEFAULT t_COLON statement_list {
-      $$[0] = new NodeDefaultClause(yylineno);
+      $$[0] = new NodeDefaultClause($3->lineno());
       $$[1] = $3;
 };
 
 labelled_statement:
     identifier t_COLON statement {
-      $$ = (new NodeLabel(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeLabel($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 throw_statement:
     t_THROW expression semicolon {
-      $$ = (new NodeStatementWithExpression(THROW, yylineno))->appendChild($2);
+      $$ = (new NodeStatementWithExpression(THROW, $2->lineno()))->appendChild($2);
     }
 ;
 
@@ -1140,7 +1140,7 @@ function_declaration:
       $$ = (new NodeFunctionDeclaration($2->lineno()))->appendChild($2)->appendChild($4)->appendChild($7);
     }
 |   t_FUNCTION identifier t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionDeclaration($2->lineno()))->appendChild($2)->appendChild(new NodeArgList(yylineno))->appendChild($6);
+      $$ = (new NodeFunctionDeclaration($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()))->appendChild($6);
     }
 ;
 
@@ -1149,19 +1149,19 @@ function_expression:
       $$ = (new NodeFunctionExpression($2->lineno()))->appendChild($2)->appendChild($4)->appendChild($7);
     }
 |   t_FUNCTION identifier t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionExpression($2->lineno()))->appendChild($2)->appendChild(new NodeArgList(yylineno))->appendChild($6);
+      $$ = (new NodeFunctionExpression($2->lineno()))->appendChild($2)->appendChild(new NodeArgList($2->lineno()))->appendChild($6);
     }
 |   t_FUNCTION t_LPAREN formal_parameter_list t_RPAREN t_LCURLY function_body t_RCURLY {
       $$ = (new NodeFunctionExpression($3->lineno()))->appendChild(NULL)->appendChild($3)->appendChild($6);
     }
 |   t_FUNCTION t_LPAREN t_RPAREN t_LCURLY function_body t_RCURLY {
-      $$ = (new NodeFunctionExpression($5->lineno()))->appendChild(NULL)->appendChild(new NodeArgList(yylineno))->appendChild($5);
+      $$ = (new NodeFunctionExpression($5->lineno()))->appendChild(NULL)->appendChild(new NodeArgList($5->lineno()))->appendChild($5);
     }
 ;
 
 formal_parameter_list:
     identifier_typehint_permitted {
-      $$ = (new NodeArgList(yylineno))->appendChild($1);
+      $$ = (new NodeArgList($1->lineno()))->appendChild($1);
     }
 |   formal_parameter_list t_COMMA identifier_typehint_permitted {
       $$ = $1->appendChild($3);
@@ -1188,7 +1188,7 @@ xml_literal:
     xml_element
 |   xml_lt t_GREATER_THAN xml_element_content t_XML_LT_DIV t_GREATER_THAN {
         fbjs_pop_xml_state(yyscanner);
-        $$ = (new NodeXMLElement(yylineno))
+        $$ = (new NodeXMLElement($3->lineno()))
           ->appendChild(NULL)->appendChild(NULL)->appendChild($3)->appendChild(NULL);
     }
 ;
@@ -1196,7 +1196,7 @@ xml_literal:
 xml_element:
     xml_tag_content t_DIV t_GREATER_THAN {
       fbjs_pop_xml_state(yyscanner);
-      $$ = $1->appendChild(new NodeXMLContentList(yylineno))->appendChild(NULL);
+      $$ = $1->appendChild(new NodeXMLContentList($1->lineno()))->appendChild(NULL);
     }
 |   xml_tag_content t_GREATER_THAN xml_element_content t_XML_LT_DIV xml_tag_name xml_ws_opt t_GREATER_THAN {
       fbjs_pop_xml_state(yyscanner);
@@ -1206,7 +1206,7 @@ xml_element:
 
 xml_tag_content:
     xml_lt xml_tag_name xml_attribute_list_opt {
-      $$ = (new NodeXMLElement(yylineno))->appendChild($2)->appendChild($3);
+      $$ = (new NodeXMLElement($2->lineno()))->appendChild($2)->appendChild($3);
     }
 ;
 
@@ -1235,7 +1235,7 @@ xml_element_content:
       $$ = new NodeXMLContentList(yylineno);
     }
 |   xml_cdata_xml_content {
-      $$ = (new NodeXMLContentList(yylineno))->appendChild($1);
+      $$ = (new NodeXMLContentList($1->lineno()))->appendChild($1);
     }
 |   xml_element_content xml_element_content_tag xml_cdata_xml_content {
       $$ = $1->appendChild($2)->appendChild($3);
@@ -1271,7 +1271,7 @@ xml_attribute_list:
     }
 |   xml_attribute_list t_XML_WHITESPACE
 |   xml_attribute_list xml_name t_ASSIGN xml_attribute_value {
-      $$ = $1->appendChild((new NodeXMLAttribute(yylineno))->appendChild($2)->appendChild($4));
+      $$ = $1->appendChild((new NodeXMLAttribute($1->lineno()))->appendChild($2)->appendChild($4));
     }
 ;
 
@@ -1406,7 +1406,7 @@ xml_ws_opt:
 statement:
     t_XML_DEFAULT_NAMESPACE t_ASSIGN expression semicolon {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeXMLDefaultNamespace(yylineno))->appendChild($3);
+      $$ = (new NodeXMLDefaultNamespace($3->lineno()))->appendChild($3);
     }
 ;
 primary_expression_no_statement:
@@ -1424,13 +1424,13 @@ property_identifier:
 
 attribute_identifier:
     t_XML_ATTRIBUTE property_selector {
-      $$ = (new NodeStaticAttributeIdentifier(yylineno))->appendChild($2);
+      $$ = (new NodeStaticAttributeIdentifier($2->lineno()))->appendChild($2);
     }
 |   t_XML_ATTRIBUTE qualified_identifier {
-      $$ = (new NodeStaticAttributeIdentifier(yylineno))->appendChild($2);
+      $$ = (new NodeStaticAttributeIdentifier($2->lineno()))->appendChild($2);
     }
 |   t_XML_ATTRIBUTE t_LBRACKET expression t_RBRACKET {
-      $$ = (new NodeDynamicAttributeIdentifier(yylineno))->appendChild($3);
+      $$ = (new NodeDynamicAttributeIdentifier($3->lineno()))->appendChild($3);
     }
 ;
 
@@ -1457,76 +1457,76 @@ wildcard_identifier:
 member_expression:
     member_expression t_PERIOD property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression t_PERIOD t_LPAREN expression t_RPAREN {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeFilteringPredicate(yylineno))->appendChild($1)->appendChild($4);
+      $$ = (new NodeFilteringPredicate($1->lineno()))->appendChild($1)->appendChild($4);
     }
 |   member_expression t_XML_DESCENDENT identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression t_XML_DESCENDENT property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 member_expression_no_statement:
     member_expression_no_statement t_PERIOD property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression_no_statement t_PERIOD t_LPAREN expression t_RPAREN {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeFilteringPredicate(yylineno))->appendChild($1)->appendChild($4);
+      $$ = (new NodeFilteringPredicate($1->lineno()))->appendChild($1)->appendChild($4);
     }
 |   member_expression_no_statement t_XML_DESCENDENT identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   member_expression_no_statement t_XML_DESCENDENT property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 call_expression:
     call_expression t_PERIOD property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression t_PERIOD t_LPAREN expression t_RPAREN {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeFilteringPredicate(yylineno))->appendChild($1)->appendChild($4);
+      $$ = (new NodeFilteringPredicate($1->lineno()))->appendChild($1)->appendChild($4);
     }
 |   call_expression t_XML_DESCENDENT identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression t_XML_DESCENDENT property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
 call_expression_no_statement:
     call_expression_no_statement t_PERIOD property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeStaticMemberExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeStaticMemberExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression_no_statement t_PERIOD t_LPAREN expression t_RPAREN {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeFilteringPredicate(yylineno))->appendChild($1)->appendChild($4);
+      $$ = (new NodeFilteringPredicate($1->lineno()))->appendChild($1)->appendChild($4);
     }
 |   call_expression_no_statement t_XML_DESCENDENT identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 |   call_expression_no_statement t_XML_DESCENDENT property_identifier {
       require_support(PARSE_E4X, "E4X not supported");
-      $$ = (new NodeDescendantExpression(yylineno))->appendChild($1)->appendChild($3);
+      $$ = (new NodeDescendantExpression($1->lineno()))->appendChild($1)->appendChild($3);
     }
 ;
 
