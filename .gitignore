@@ -1,0 +1,13 @@
+/dmg_fp_dtoa.o
+/dmg_fp_g_fmt.o
+/libfbjs.a
+/libfbjs.so
+/node.o
+/parser.lex.cpp
+/parser.lex.o
+/parser.o
+/parser.yacc.cpp
+/parser.yacc.hpp
+/parser.yacc.o
+/parser.yacc.output
+/walker.o
