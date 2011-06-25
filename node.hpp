@@ -416,6 +416,9 @@ namespace fbjs {
     public:
       NODE_WALKER_ACCEPT_DECL;
       NodeStatementWithExpression(node_statement_with_expression_t statement, const unsigned int lineno = 0);
+      const node_statement_with_expression_t statementType() const {
+        return statement;
+      }
       virtual Node* clone(Node* node = NULL) const;
       virtual rope_t render(render_guts_t* guts, int indentation) const;
       virtual bool operator== (const Node&) const;
